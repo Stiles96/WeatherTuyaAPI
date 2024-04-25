@@ -1,0 +1,23 @@
+{
+  "BaseURL": "https://openapi.tuyaeu.com",
+  "Client_ID": "",
+  "Client_Secret": "",
+  "deviceId": "",
+  "URL_InfluxDB": "http://server.example:8086",
+  "API_Key": "",
+  "Org": "",
+  "Bucket": "",
+  "Table": "",
+  "sensor": "",
+  "APRSUsername": "Callsign",
+  "APRSPasscode": "",
+  "APRSURL": "rotate.aprs.net",
+  "APRSPort": 14580,
+  "APRSPosition": "4815.80N/01209.30E",
+  "APRSGateway": "rotate",
+  "MQTTUsername": "",
+  "MQTTPassword": "!",
+  "MQTTHost": "",
+  "MQTTPort": 1883,
+  "MQTTTopic": "Wetterstation"
+}

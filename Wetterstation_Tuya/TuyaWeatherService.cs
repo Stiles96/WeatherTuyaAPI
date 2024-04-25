@@ -11,35 +11,68 @@ using TuyaAPI.Models;
 using TuyaAPI;
 using System.Timers;
 
+
+/* Eventlog Error Codes
+ * 
+ * OK / Info
+ * 1 Service started
+ * 2 Service initiated
+ * 3 Service stopped
+ * 
+ * 20 APRS Response
+ * 21 APRS Dataline
+ * 
+ * 30 MQTT Connect
+ * 31 MQTT Reconnect
+ * 32 MQTT connected
+ * 33 MQTT Init Complete
+ * 
+ * Errors
+ * 37 MQTT (re-)connect
+ * 38 MQTT Connection lost
+ * 39 MQTT Client failed
+ * 
+ * 100 General Error in Loop
+ * 101 Init failed
+ * 102 Retry Init
+ * 103 Get Tuya Device Info failed
+ *
+ */
+
+
 namespace Wetterstation_Tuya
 {
     public partial class TuyaWeatherService : ServiceBase
     {
+        const string APPLICATION_NAME = "Weather Tuya API";
+
+        string Software = "WeatherAPI 1.1.0";
         string BaseURL = Regions.URL_EU;
-		string Client_ID = "TuyaClientID";
-		string Client_Secret = "TuyaClientSecret";
-		string deviceId = "TuyaDeviceID_WeatherStation";
 
-		string URL_InfluxDB = "http://influxdb.local:8086";
-		string API_Key = "InfluxDBAPIKey";
-		string Org = "InfluxDBOrg";
-		string Bucket = "weather";
-		string Table = "Wetterstation";
-		string sensor = "tuya";
+        string Client_ID = "";
+        string Client_Secret = "";
+        string deviceId = "";
 
-		string Username = "Callsign-13";
-		string Passcode = "Passcode";
-		string Software = "WeatherAPI 1.0.0";
-		string URL_APRS = "rotate.aprs.net";
-		int Port = 14580;
-		string Position = "Loacation";
-		string Gateway = "rotate";
+        string URL_InfluxDB = "";
+        string API_Key = "";
+        string Org = "";
+        string Bucket = "";
+        string Table = "";
+        string sensor = "";
+
+        string Username = "";
+        string Passcode = "";
+        string URL_APRS = "";
+        int Port = 14580;
+        string Position = "";
+        string Gateway = "rotate";
 
         int counter = 10;
 
         TuyaAPI.TuyaAPI tuyapi;
         InfluxDBAPI influxdbapi;
         APRS_API aprsapi;
+        MQTTClient mqttClient;
 
         Timer timer = new Timer();
         System.Diagnostics.EventLog eventLog;
@@ -59,33 +92,74 @@ namespace Wetterstation_Tuya
             timer.Interval = 30000; //30 sek
             timer.Enabled = true;
 
+            Init();
+
+            eventLog.WriteEntry("Service initiated at " + DateTime.Now, EventLogEntryType.Information, 2);
+        }
+
+        void Init()
+        {
             int errortry = 0;
             bool repeat = false;
             do
             {
                 try
                 {
+                    string ProgramDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\" + APPLICATION_NAME;
+                    FileAccess.CheckFolder(ProgramDataPath);
+                    Settings settings = new Settings();
+                    if (!FileAccess.CheckFile(ProgramDataPath + "\\settings.json"))
+                    {
+                        FileAccess.WriteJSONFile(ProgramDataPath + "\\settings.json", Helper.GetJson(settings));
+                    }
+                    settings = Helper.GetObject<Settings>(FileAccess.ReadJSONFile(ProgramDataPath + "\\settings.json"));
+
+                    BaseURL = settings.BaseURL;
+                    Client_ID = settings.Client_ID;
+                    Client_Secret = settings.Client_Secret;
+                    deviceId = settings.deviceId;
+
+                    URL_InfluxDB = settings.URL_InfluxDB;
+                    API_Key = settings.API_Key;
+                    Org = settings.Org;
+                    Bucket = settings.Bucket;
+                    Table = settings.Table;
+                    sensor = settings.sensor;
+
+                    Username = settings.APRSUsername;
+                    Passcode = settings.APRSPasscode;
+                    URL_APRS = settings.APRSURL;
+                    Port = settings.APRSPort;
+                    Position = settings.Position;
+                    Gateway = settings.APRSGateway;
+
                     repeat = false;
                     tuyapi = new TuyaAPI.TuyaAPI(Client_ID, Client_Secret, BaseURL);
-                    influxdbapi = new InfluxDBAPI(URL_InfluxDB, API_Key, Bucket, Org);
-                    aprsapi = new APRS_API(URL_APRS, Port, Username, Passcode, Software, Position, Gateway, eventLog);
+                    if (influxdbapi == null)
+                        influxdbapi = new InfluxDBAPI(URL_InfluxDB, API_Key, Bucket, Org);
+                    if (aprsapi == null)
+                        aprsapi = new APRS_API(URL_APRS, Port, Username, Passcode, Software, Position, Gateway, eventLog);
+                    if (mqttClient == null)
+                        //mqttClient.Disconnect();
+                        mqttClient = new MQTTClient(eventLog, settings);
 
-                    var info = tuyapi.getDeviceInformation(deviceId);
-                    var deviceName = info.result.name;
-                    var isOnline = info.result.online;
-                    var uptime = info.result.update_time;
-                    var createtime = info.result.create_time;
-                    var activetime = info.result.active_time;
-                    var uid = info.result.uid;
-                    var users = tuyapi.getUserInfo(uid);
+                    //var info = tuyapi.getDeviceInformation(deviceId);
+                    //var deviceName = info.result.name;
+                    //var isOnline = info.result.online;
+                    //var uptime = info.result.update_time;
+                    //var createtime = info.result.create_time;
+                    //var activetime = info.result.active_time;
+                    //var uid = info.result.uid;
+                    //var users = tuyapi.getUserInfo(uid);
 
-                    var devlist1 = tuyapi.getDeviceList(uid);
+                    //var devlist1 = tuyapi.getDeviceList(uid);
 
-                    var dfn = tuyapi.getDeviceFunctions(deviceId);
+                    //var dfn = tuyapi.getDeviceFunctions(deviceId);
                 }
                 catch (Exception ex)
                 {
-                    eventLog.WriteEntry("Init failed. " + ex.Message, EventLogEntryType.Error, 101);
+                    eventLog.WriteEntry("Init failed. " + ex.Message + "\r\n" + ex.StackTrace, EventLogEntryType.Error, 101);
+                    //mqttClient?.Disconnect();
                     errortry++;
                     if (errortry < 3)
                     {
@@ -94,10 +168,6 @@ namespace Wetterstation_Tuya
                     }
                 }
             } while (repeat);
-
-
-            eventLog.WriteEntry("Service initiated at " + DateTime.Now, EventLogEntryType.Information, 2);
-
         }
 
         private void OnElapsedTime(object source, ElapsedEventArgs e)
@@ -107,11 +177,15 @@ namespace Wetterstation_Tuya
 
         protected void loop()
         {
+            string LastStep = "Start";
             try
             {
                 APRSData aprsData = new APRSData();
+                MQTTData mqttData = new MQTTData();
+                LastStep = "Init Vars";
                 counter++;
                 var ds = tuyapi.getDeviceStatus(deviceId);
+                LastStep = "Get Device Status from TuyaAPI";
                 string dataline = "";
                 foreach (var dspropertie in ds.result)
                 {
@@ -121,6 +195,7 @@ namespace Wetterstation_Tuya
                         int value = Convert.ToInt32(dspropertie.value);
                         dataline = dataline + dspropertie.code + "=" + value + ",";
                         aprsData = helper.GetAPRSData(aprsData, dspropertie);
+                        mqttData = helper.GetMQTTData(mqttData, dspropertie);
                     }
                     catch
                     {
@@ -132,20 +207,52 @@ namespace Wetterstation_Tuya
                         dataline = dataline + "wind_direct_degree=" + winddirect.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",";
                         Console.WriteLine("wind_direct_degree: " + winddirect.ToString(System.Globalization.CultureInfo.InvariantCulture));
                         aprsData.wind_direct = Convert.ToInt16(winddirect);
+                        mqttData.wind_direct = Convert.ToInt16(winddirect);
                     }
+                    LastStep = "Dataline: " + dspropertie.code;
                     //dataline = dataline + dspropertie.code + "=" + dspropertie.value + ",";
                 }
+                LastStep = "DataLine Build";
                 dataline = dataline.Remove(dataline.Length - 1, 1);
                 influxdbapi.WriteCurrentData(Table, sensor, dataline, ds.t.ToUnixTimeMilliseconds().ToString());
+                LastStep = "Sent data to InfluxDB";
                 if (counter >= 10)
                 {
+                    try
+                    {
+                        var info = tuyapi.getDeviceInformation(deviceId);
+                        LastStep = "Get Device Info from Tuya API";
+                        if (info != null && info.result != null)
+                        {
+                            mqttData.online = info.result.online;
+                            mqttData.LastUpdate = info.result.update_time;
+                            mqttData.IP = info.result.ip;
+                            LastStep = "Add Device Info to MQTT";
+                        }
+                        else
+                        {
+                            mqttData.online = true;
+                            mqttData.LastUpdate = new DateTimeOffset(1970, 1, 1, 0, 0, 0, new TimeSpan(0));
+                            mqttData.IP = "";
+                            LastStep = "Add null Info to MQTT";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        eventLog.WriteEntry(ex.Message + " \n " + ex.Source + " \n " + ex.StackTrace + " \n LastStep: " + LastStep, EventLogEntryType.Error, 103);
+                    }
+
                     aprsapi.SendWeatherData(ds.t, aprsData.wind_direct, aprsData.wind_speed_avg, aprsData.wind_speed_gust, aprsData.temp, aprsData.rain, aprsData.humidity, aprsData.pressure, eventLog);
+                    LastStep = "Pushed data to APRS";
+                    mqttClient.PushData(mqttData);
+                    LastStep = "Pushed data to MQTT";
                     counter = 0;
                 }
             }
             catch (Exception ex)
             {
-                eventLog.WriteEntry(ex.Message + " \n " + ex.Source + " \n " + ex.StackTrace, EventLogEntryType.Error, 100);
+                eventLog.WriteEntry(ex.Message + " \n " + ex.Source + " \n " + ex.StackTrace + " \n LastStep: " + LastStep, EventLogEntryType.Error, 100);
+                Init();
             }
         }
 

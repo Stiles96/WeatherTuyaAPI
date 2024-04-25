@@ -118,5 +118,44 @@ namespace TuyaAPI
                     return data;
             }
         }
+
+        public static MQTTData GetMQTTData(MQTTData data, DeviceStatusModel.Result result)
+        {
+            switch (result.code)
+            {
+                case "temp_current":
+                    data.indoor_temp = Convert.ToSingle(result.value) / 10;
+                    return data;
+                case "humidity_value":
+                    data.indoor_humidity = Convert.ToInt16(result.value);
+                    return data;
+                case "temp_current_external":
+                    data.outdoor_temp = Convert.ToSingle(result.value) / 10;
+                    return data;
+                case "humidity_outdoor":
+                    data.outdoor_humidity = Convert.ToInt16(result.value);
+                    return data;
+                case "wind_direct_degree":
+                    data.wind_direct = Convert.ToInt16(result.value);
+                    return data;
+                case "windspeed_avg":
+                    data.wind_speed_avg = Convert.ToInt16(result.value);
+                    return data;
+                case "rain_24h":
+                    data.rain = Convert.ToSingle(result.value) / 1000;
+                    return data;
+                case "atmospheric_pressture":
+                    data.pressure = Convert.ToInt16(result.value);
+                    return data;
+                case "dew_point_temp":
+                    data.dew_point = Convert.ToSingle(result.value) / 10;
+                    return data;
+                case "bright_value":
+                    data.bright = Convert.ToInt32(result.value);
+                    return data;
+                default:
+                    return data;
+            }
+        }
     }
 }

@@ -8,11 +8,12 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>TuyaAPI</RootNamespace>
     <AssemblyName>TuyaAPI</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
+    <TargetFrameworkProfile />
     <PublishUrl>T:\Dorfen\Gemeinsam\Installationen\TuyaAPI_Wetterstation\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -27,7 +28,7 @@
     <SupportUrl>http://weather.he-it.eu</SupportUrl>
     <ProductName>Weather Tuya API</ProductName>
     <PublisherName>HE IT-Service</PublisherName>
-    <ApplicationRevision>7</ApplicationRevision>
+    <ApplicationRevision>9</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -72,6 +73,12 @@
     <StartupObject>TuyaAPI.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="M2Mqtt.Net, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\M2Mqtt.4.3.0.0\lib\net45\M2Mqtt.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="RestSharp, Version=106.11.7.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
       <HintPath>..\packages\RestSharp.106.11.7\lib\net452\RestSharp.dll</HintPath>
     </Reference>
@@ -91,6 +98,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="APRS_API.cs" />
+    <Compile Include="Database\FileAccess.cs" />
+    <Compile Include="Helper\Helper.cs" />
     <Compile Include="Models\APRSData.cs" />
     <Compile Include="Models\AuthResponse.cs" />
     <Compile Include="helper.cs" />
@@ -104,9 +113,12 @@
     <Compile Include="Models\DeviceStatusModel.cs" />
     <Compile Include="Models\FunctionList.cs" />
     <Compile Include="InfluxDBAPI.cs" />
+    <Compile Include="Models\MQTTData.cs" />
     <Compile Include="Models\Regions.cs" />
+    <Compile Include="Models\Settings.cs" />
     <Compile Include="Models\Token.cs" />
     <Compile Include="Models\UserInfoModel.cs" />
+    <Compile Include="MQTTClient.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TuyaAPI.cs" />
@@ -114,6 +126,8 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Settings\settings.json.example" />
+    <None Include="Settings\settings.json" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">
